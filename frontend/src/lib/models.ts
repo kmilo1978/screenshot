@@ -39,6 +39,10 @@ export enum CodeGenerationModel {
   GEMINI_3_6_FLASH_MEDIUM = "gemini-3.6-flash (medium thinking)",
   GEMINI_3_6_FLASH_LOW = "gemini-3.6-flash (low thinking)",
   GEMINI_3_6_FLASH_MINIMAL = "gemini-3.6-flash (minimal thinking)",
+  // NVIDIA NIM
+  NVIDIA_LLAMA_3_1_NEMOTRON_70B = "nvidia/llama-3.1-nemotron-70b-instruct",
+  NVIDIA_LLAMA_3_3_70B = "nvidia/llama-3.3-70b-instruct",
+  NVIDIA_NEMOTRON_4_340B = "nvidia/nemotron-4-340b-instruct",
 }
 
 export type VariantLabelTone = "fast" | "max";
@@ -191,5 +195,14 @@ export const CODE_GENERATION_MODEL_DESCRIPTIONS: {
   },
   "gemini-3.1-pro-preview (low thinking)": {
     name: "Gemini 3.1 Pro (low)",
+  },
+  "nvidia/llama-3.1-nemotron-70b-instruct": {
+    name: "NVIDIA Nemotron 70B",
+  },
+  "nvidia/llama-3.3-70b-instruct": {
+    name: "NVIDIA Llama 3.3 70B",
+  },
+  "nvidia/nemotron-4-340b-instruct": {
+    name: "NVIDIA Nemotron 4 340B",
   },
 };

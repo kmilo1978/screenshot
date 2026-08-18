@@ -40,6 +40,10 @@ class Llm(Enum):
     CLAUDE_FABLE_5_HIGH = "claude-fable-5 (high effort)"
     CLAUDE_FABLE_5_XHIGH = "claude-fable-5 (xhigh effort)"
     CLAUDE_FABLE_5_MAX = "claude-fable-5 (max effort)"
+    # NVIDIA NIM
+    NVIDIA_LLAMA_3_1_NEMOTRON_70B = "nvidia/llama-3.1-nemotron-70b-instruct"
+    NVIDIA_LLAMA_3_3_70B = "nvidia/llama-3.3-70b-instruct"
+    NVIDIA_NEMOTRON_4_340B = "nvidia/nemotron-4-340b-instruct"
     # Gemini
     GEMINI_3_FLASH_PREVIEW_HIGH = "gemini-3-flash-preview (high thinking)"
     GEMINI_3_FLASH_PREVIEW_MINIMAL = "gemini-3-flash-preview (minimal thinking)"
@@ -115,12 +119,17 @@ MODEL_PROVIDER: dict[Llm, str] = {
     Llm.GEMINI_3_6_FLASH_MEDIUM: "gemini",
     Llm.GEMINI_3_6_FLASH_LOW: "gemini",
     Llm.GEMINI_3_6_FLASH_MINIMAL: "gemini",
+    # NVIDIA NIM models
+    Llm.NVIDIA_LLAMA_3_1_NEMOTRON_70B: "nvidia",
+    Llm.NVIDIA_LLAMA_3_3_70B: "nvidia",
+    Llm.NVIDIA_NEMOTRON_4_340B: "nvidia",
 }
 
 # Convenience sets for membership checks
 OPENAI_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "openai"}
 ANTHROPIC_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "anthropic"}
 GEMINI_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "gemini"}
+NVIDIA_MODELS = {m for m, p in MODEL_PROVIDER.items() if p == "nvidia"}
 
 OPENAI_MODEL_CONFIG: dict[Llm, dict[str, str]] = {
     Llm.GPT_5_4_MINI_LOW: {"api_name": "gpt-5.4-mini", "reasoning_effort": "low"},
@@ -165,3 +174,21 @@ def get_openai_api_name(model: Llm) -> str:
 
 def get_openai_reasoning_effort(model: Llm) -> str | None:
     return OPENAI_MODEL_CONFIG.get(model, {}).get("reasoning_effort")
+
+
+# NVIDIA NIM model config — maps enum to the actual API model ID
+NVIDIA_MODEL_CONFIG: dict[Llm, dict[str, str]] = {
+    Llm.NVIDIA_LLAMA_3_1_NEMOTRON_70B: {
+        "api_name": "nvidia/llama-3.1-nemotron-70b-instruct",
+    },
+    Llm.NVIDIA_LLAMA_3_3_70B: {
+        "api_name": "meta/llama-3.3-70b-instruct",
+    },
+    Llm.NVIDIA_NEMOTRON_4_340B: {
+        "api_name": "nvidia/nemotron-4-340b-instruct",
+    },
+}
+
+
+def get_nvidia_api_name(model: Llm) -> str:
+    return NVIDIA_MODEL_CONFIG[model]["api_name"]

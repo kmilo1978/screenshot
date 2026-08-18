@@ -16,6 +16,7 @@ from config import (
     IS_PROD,
     NUM_VARIANTS,
     NUM_VARIANTS_VIDEO,
+    NVIDIA_API_KEY,
     OPENAI_API_KEY,
     OPENAI_BASE_URL,
     REPLICATE_API_KEY,
@@ -69,8 +70,10 @@ from routes.model_choice_sets import (
     ALL_KEYS_MODELS_UPDATE,
     ANTHROPIC_ONLY_MODELS,
     GEMINI_ANTHROPIC_MODELS,
+    GEMINI_NVIDIA_MODELS,
     GEMINI_OPENAI_MODELS,
     GEMINI_ONLY_MODELS,
+    NVIDIA_ONLY_MODELS,
     OPENAI_ANTHROPIC_MODELS,
     OPENAI_ONLY_MODELS,
     VIDEO_VARIANT_MODELS,
@@ -259,6 +262,7 @@ class ExtractedParams:
     anthropic_api_key: str | None
     gemini_api_key: str | None
     replicate_api_key: str | None
+    nvidia_api_key: str | None
     openai_base_url: str | None
     generation_type: Literal["create", "update"]
     prompt: UserTurnInput
@@ -312,6 +316,10 @@ class ParameterExtractionStage:
         )
         replicate_api_key = self._get_from_settings_dialog_or_env(
             params, "replicateApiKey", REPLICATE_API_KEY
+        )
+
+        nvidia_api_key = self._get_from_settings_dialog_or_env(
+            params, "nvidiaApiKey", NVIDIA_API_KEY
         )
 
         # Base URL for OpenAI API
@@ -382,6 +390,7 @@ class ParameterExtractionStage:
             anthropic_api_key=anthropic_api_key,
             gemini_api_key=gemini_api_key,
             replicate_api_key=replicate_api_key,
+            nvidia_api_key=nvidia_api_key,
             openai_base_url=openai_base_url,
             generation_type=generation_type,
             prompt=prompt,
@@ -421,6 +430,7 @@ class ModelSelectionStage:
         openai_api_key: str | None,
         anthropic_api_key: str | None,
         gemini_api_key: str | None = None,
+        nvidia_api_key: str | None = None,
     ) -> List[Llm]:
         """Select appropriate models based on available API keys"""
         try:
@@ -432,6 +442,7 @@ class ModelSelectionStage:
                 openai_api_key,
                 anthropic_api_key,
                 gemini_api_key,
+                nvidia_api_key,
             )
 
             # Print the variant models (one per line)
@@ -442,8 +453,8 @@ class ModelSelectionStage:
             return variant_models
         except Exception:
             await self.throw_error(
-                "No OpenAI, Anthropic, or Gemini API key found. Please add the environment variable "
-                "OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY to backend/.env or in the settings dialog. "
+                "No OpenAI, Anthropic, Gemini, or NVIDIA API key found. Please add the environment variable "
+                "OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or NVIDIA_API_KEY to backend/.env or in the settings dialog. "
                 "If you add it to .env, make sure to restart the backend server."
             )
             raise Exception("No API key")
@@ -456,6 +467,7 @@ class ModelSelectionStage:
         openai_api_key: str | None,
         anthropic_api_key: str | None,
         gemini_api_key: str | None,
+        nvidia_api_key: str | None,
     ) -> List[Llm]:
         """Simple model cycling that scales with num_variants"""
 
@@ -482,12 +494,19 @@ class ModelSelectionStage:
             models = list(GEMINI_OPENAI_MODELS)
         elif openai_api_key and anthropic_api_key:
             models = list(OPENAI_ANTHROPIC_MODELS)
+        elif gemini_api_key and nvidia_api_key:
+            # Gemini primary, ignore NVIDIA in auto-selection (rate limits)
+            models = list(GEMINI_ONLY_MODELS)
         elif gemini_api_key:
             models = list(GEMINI_ONLY_MODELS)
         elif anthropic_api_key:
             models = list(ANTHROPIC_ONLY_MODELS)
         elif openai_api_key:
             models = list(OPENAI_ONLY_MODELS)
+        elif nvidia_api_key:
+            models = list(NVIDIA_ONLY_MODELS)
+            # NVIDIA free tier has strict rate limits, use only 1 variant
+            num_variants = 1
         else:
             raise Exception("No OpenAI or Anthropic key")
 
@@ -557,6 +576,7 @@ class AgenticGenerationStage:
         anthropic_api_key: str | None,
         gemini_api_key: str | None,
         replicate_api_key: str | None,
+        nvidia_api_key: str | None,
         should_generate_images: bool,
         file_state: Dict[str, str] | None,
         asset_base_url: str,
@@ -573,6 +593,7 @@ class AgenticGenerationStage:
         self.anthropic_api_key = anthropic_api_key
         self.gemini_api_key = gemini_api_key
         self.replicate_api_key = replicate_api_key
+        self.nvidia_api_key = nvidia_api_key
         self.should_generate_images = should_generate_images
         self.should_extract_assets = should_extract_assets
         self.file_state = file_state
@@ -648,6 +669,7 @@ class AgenticGenerationStage:
                 anthropic_api_key=self.anthropic_api_key,
                 gemini_api_key=self.gemini_api_key,
                 replicate_api_key=self.replicate_api_key,
+                nvidia_api_key=self.nvidia_api_key,
                 should_generate_images=self.should_generate_images,
                 should_extract_assets=self.should_extract_assets,
                 asset_base_url=self.asset_base_url,
@@ -815,6 +837,7 @@ class CodeGenerationMiddleware(Middleware):
                 openai_api_key=context.extracted_params.openai_api_key,
                 anthropic_api_key=context.extracted_params.anthropic_api_key,
                 gemini_api_key=context.extracted_params.gemini_api_key,
+                nvidia_api_key=context.extracted_params.nvidia_api_key,
             )
             if IS_DEBUG_ENABLED:
                 await context.send_message(
@@ -832,6 +855,7 @@ class CodeGenerationMiddleware(Middleware):
                 anthropic_api_key=context.extracted_params.anthropic_api_key,
                 gemini_api_key=context.extracted_params.gemini_api_key,
                 replicate_api_key=context.extracted_params.replicate_api_key,
+                nvidia_api_key=context.extracted_params.nvidia_api_key,
                 should_generate_images=context.extracted_params.should_generate_images,
                 should_extract_assets=context.extracted_params.should_extract_assets,
                 file_state=context.extracted_params.file_state,
@@ -887,6 +911,7 @@ class PostProcessingMiddleware(Middleware):
 @router.websocket("/generate-code")
 async def stream_code(websocket: WebSocket):
     """Handle WebSocket code generation requests using a pipeline pattern"""
+    print("[WS] New WebSocket connection to /generate-code")
     pipeline = Pipeline()
 
     # Configure the pipeline
