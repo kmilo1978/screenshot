@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: screenshot-to-code
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    branch: main
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PORT
+        value: "7001"
