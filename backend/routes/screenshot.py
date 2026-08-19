@@ -42,9 +42,40 @@ def bytes_to_data_url(image_bytes: bytes, mime_type: str) -> str:
     return f"data:{mime_type};base64,{base64_image}"
 
 
-async def capture_screenshot(
+async def capture_screenshot_with_playwright(
+    target_url: str, device: str = "desktop"
+) -> bytes:
+    """Capture a screenshot using local Playwright (no external API needed)."""
+    from playwright.async_api import async_playwright
+
+    if device == "desktop":
+        viewport = {"width": 1280, "height": 832}
+    else:
+        viewport = {"width": 342, "height": 684}
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True, args=["--no-sandbox"])
+        page = await browser.new_page(
+            viewport=viewport,
+            device_scale_factor=1,
+        )
+        try:
+            await page.goto(target_url, wait_until="networkidle", timeout=30000)
+        except Exception:
+            # If networkidle times out, capture whatever loaded
+            pass
+        # Wait a moment for any remaining renders
+        await page.wait_for_timeout(500)
+        screenshot_bytes = await page.screenshot(full_page=True, type="png")
+        await page.close()
+        await browser.close()
+        return screenshot_bytes
+
+
+async def capture_screenshot_with_api(
     target_url: str, api_key: str, device: str = "desktop"
 ) -> bytes:
+    """Fallback: capture screenshot using ScreenshotOne API."""
     api_base_url = "https://api.screenshotone.com/take"
 
     params = {
@@ -75,7 +106,7 @@ async def capture_screenshot(
 
 class ScreenshotRequest(BaseModel):
     url: str
-    apiKey: str
+    apiKey: str = ""  # Now optional — Playwright is used by default
 
 
 class ScreenshotResponse(BaseModel):
@@ -92,8 +123,16 @@ async def app_screenshot(request: ScreenshotRequest):
         # Normalize the URL
         normalized_url = normalize_url(url)
         
-        # Capture screenshot with normalized URL
-        image_bytes = await capture_screenshot(normalized_url, api_key=api_key)
+        # Use Playwright locally (free, no API key needed)
+        # Falls back to ScreenshotOne API if a key is provided and Playwright fails
+        try:
+            image_bytes = await capture_screenshot_with_playwright(normalized_url)
+        except Exception as playwright_err:
+            if api_key:
+                # Fallback to ScreenshotOne if Playwright fails and key is available
+                image_bytes = await capture_screenshot_with_api(normalized_url, api_key=api_key)
+            else:
+                raise playwright_err
 
         # Convert the image bytes to a data url
         data_url = bytes_to_data_url(image_bytes, "image/png")

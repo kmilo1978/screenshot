@@ -40,14 +40,6 @@ function UrlTab({
   async function takeScreenshot() {
     const trimmedReferenceUrl = referenceUrl.trim();
 
-    if (!screenshotOneApiKey) {
-      toast.error(
-        "Please add a ScreenshotOne API key in Settings. You can also upload screenshots directly in the Upload tab.",
-        { duration: 6000 },
-      );
-      return;
-    }
-
     if (!trimmedReferenceUrl) {
       toast.error("Please enter a URL");
       return;
@@ -74,7 +66,7 @@ function UrlTab({
         method: "POST",
         body: JSON.stringify({
           url: trimmedReferenceUrl,
-          apiKey: screenshotOneApiKey,
+          apiKey: screenshotOneApiKey || "",
         }),
         headers: {
           "Content-Type": "application/json",
@@ -157,7 +149,7 @@ function UrlTab({
             </p>
           ) : (
             <p className="text-[11px] text-gray-400 dark:text-zinc-500">
-              Requires a ScreenshotOne API key in Settings.
+              Uses Playwright to capture the page. No API key needed.
             </p>
           )}
         </div>
