@@ -19,22 +19,6 @@ ENV PORT=7001
 # Install system deps for Playwright
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    libxshmfence1 \
-    libx11-xcb1 \
-    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -45,8 +29,8 @@ WORKDIR /app
 COPY backend/poetry.lock backend/pyproject.toml ./
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi --no-root
 
-# Install Playwright Chromium
-RUN playwright install chromium
+# Install Playwright Chromium with ALL system dependencies
+RUN playwright install --with-deps chromium
 
 # Copy backend code
 COPY backend/ ./
